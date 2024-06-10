@@ -5,13 +5,28 @@ from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_se
 from torch.distributions import Categorical
 
 class CustomCNN(nn.Module):
-    def __init__(self, ):
+    def __init__(self, hidden_dim):
         # NOTE: you can freely add hyperparameters argument
         super(CustomCNN, self).__init__()
         ##############################################################################
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
         # define cnn model
+        """
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.fc1 = nn.Linear(64 * 7 * 7, 128)  # Assuming input image size is 28x28
+        self.fc2 = nn.Linear(128, 32)
+        """
+
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        height = 28
+        width = 28
+        self.fc1 = nn.Linear(128 * (height // 8) * (width // 8), hidden_dim)  # Adjust based on input size
         ##############################################################################
         #                          END OF YOUR CODE                                  #
         ##############################################################################
@@ -25,6 +40,22 @@ class CustomCNN(nn.Module):
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
         # Problem 1: design CNN forward path
+        batch_size, seq_length, height, width, channels = inputs.size()
+        x = inputs.view(batch_size * seq_length, channels, height, width)
+        x = F.relu(self.conv1(x))
+        x = self.pool(x)
+        x = F.relu(self.conv2(x))
+        x = self.pool(x)
+        x = F.relu(self.conv3(x))
+        x = self.pool(x)
+
+        # Flatten the CNN output
+        x = x.view(x.size(0), -1)
+        #print(x.size)
+        #x = x.view(batch_size * seq_length, -1)
+        x = F.relu(self.fc1(x))
+        #x = self.fc2(x)
+        outputs = x.view(batch_size, seq_length, -1)
         
         ##############################################################################
         #                          END OF YOUR CODE                                  #
@@ -39,7 +70,7 @@ class Encoder(nn.Module):
         ##############################################################################
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
-        self.cnn = CustomCNN()
+        self.cnn = CustomCNN(hidden_dim)
         # NOTE: you can freely modify self.rnn module (ex. LSTM -> GRU)
         self.rnn = nn.LSTM(
             input_size=hidden_dim,
@@ -47,7 +78,7 @@ class Encoder(nn.Module):
             num_layers=num_layers,
             batch_first=True,
         )
-        self.fc =
+        self.fc = nn.Linear(hidden_dim, hidden_dim)
         # NOTE: you can define additional parameters
         ##############################################################################
         #                          END OF YOUR CODE                                  #
@@ -68,7 +99,6 @@ class Encoder(nn.Module):
         packed_output, hidden_state = self.rnn(packed_input)
         output, _ = pad_packed_sequence(packed_output, batch_first=True)
         output = self.fc(output)
-        output = 
         # NOTE: you can utilize additional parameters
         ##############################################################################
         #                          END OF YOUR CODE                                  #
@@ -112,6 +142,12 @@ class Decoder(nn.Module):
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
         # Problem 2: design Decoder forward path
+        # Embedding the input sequence
+        embedded = self.embedding(input_seq)
+        # Passing the embedded sequence through the RNN
+        output, hidden_state = self.rnn(embedded, hidden_state)
+        # Generating the output tokens
+        output = self.lm_head(output)
         
         ##############################################################################
         #                          END OF YOUR CODE                                  #
@@ -120,14 +156,16 @@ class Decoder(nn.Module):
 
 
 class Seq2SeqModel(nn.Module):
-    def __init__(self, num_classes=28, hidden_dim=64, n_rnn_layers=2, rnn_dropout=0.5):
+    def __init__(self, num_classes=28, hidden_dim=64, n_rnn_layers=2, rnn_dropout=0.5, device = torch.device("cuda:0")):
         # NOTE: you can freely add hyperparameters argument
         super(Seq2SeqModel, self).__init__()
         ##############################################################################
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
+        self.n_vocab = num_classes
         self.encoder = Encoder(hidden_dim=hidden_dim, num_layers=n_rnn_layers)
         self.decoder = Decoder(n_vocab=num_classes, hidden_dim=hidden_dim, num_layers=n_rnn_layers)
+        self.device = device
         # NOTE: you can define additional parameters
         ##############################################################################
         #                          END OF YOUR CODE                                  #
@@ -146,6 +184,28 @@ class Seq2SeqModel(nn.Module):
         ##############################################################################
         # Problem 3: design Seq2SeqModel forward path using encoder and decoder
         
+        # Encode the input sequence
+        encoder_outputs, hidden_state = self.encoder(inputs, lengths)
+        #print(hidden_state[0].shape)
+        #print(hidden_state[1].shape)
+        
+        # Decode the encoded sequence
+        logits, hidden_state = self.decoder(inp_seq, hidden_state)
+
+        """
+        # New
+        Batch_size, Sequence_length = inp_seq.shape
+        logits = torch.zeros(Batch_size, Sequence_length, self.n_vocab).to(self.device)
+        input = inp_seq[:, :1]
+        for t in range(1, Sequence_length):
+            #print(f"{input.shape=}")
+            output, hidden_state = self.decoder(input, hidden_state)
+            #print(hidden_state[0].shape)
+            #print(hidden_state[1].shape)
+            logits[:, t, :] = output.squeeze(1)
+            input = inp_seq[:, t-1 : t]
+        """
+        
         ##############################################################################
         #                          END OF YOUR CODE                                  #
         ##############################################################################
@@ -163,6 +223,23 @@ class Seq2SeqModel(nn.Module):
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
         # Problem 4: design generate function of Seq2SeqModel
+
+        encoder_outputs, encoder_hidden = self.encoder(inputs, lengths)
+        
+        # Initialize the input for the decoder with the start token
+        dec_input = inp_seq
+        dec_hidden = encoder_hidden
+        
+        generated_tok = []
+        
+        for t in range(max_length):
+            logits, dec_hidden = self.decoder(dec_input, dec_hidden)
+            predicted_token = logits.argmax(2)
+            generated_tok.append(predicted_token)
+            
+            dec_input = predicted_token
+        
+        generated_tok = torch.cat(generated_tok, dim=1)
         
         ##############################################################################
         #                          END OF YOUR CODE                                  #
