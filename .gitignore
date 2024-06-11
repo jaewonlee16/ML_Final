@@ -3,6 +3,7 @@ model.pt
 
 # Data directory
 data_final/
+*.tar.gz
 
 # Colab
 git.ipynb
