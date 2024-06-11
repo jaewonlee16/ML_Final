@@ -20,13 +20,29 @@ class CustomCNN(nn.Module):
         self.fc2 = nn.Linear(128, 32)
         """
 
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1),
+            nn.ReLU(True)
+        )
+        self.maxPool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+            nn.ReLU(True)
+        )
+        self.maxPool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
+            nn.ReLU(True)
+        )
+        self.maxPool3 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv4 = nn.Sequential(
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
+            nn.ReLU(True)
+        )
+        self.avgPool4 = nn.AvgPool2d(kernel_size=3, stride=1)
         height = 28
         width = 28
-        self.fc1 = nn.Linear(128 * (height // 8) * (width // 8), hidden_dim)  # Adjust based on input size
+        self.fc1 = nn.Linear(256, hidden_dim)  # Adjust based on input size
         ##############################################################################
         #                          END OF YOUR CODE                                  #
         ##############################################################################
@@ -42,19 +58,23 @@ class CustomCNN(nn.Module):
         # Problem 1: design CNN forward path
         batch_size, seq_length, height, width, channels = inputs.size()
         x = inputs.view(batch_size * seq_length, channels, height, width)
-        x = F.relu(self.conv1(x))
-        x = self.pool(x)
-        x = F.relu(self.conv2(x))
-        x = self.pool(x)
-        x = F.relu(self.conv3(x))
-        x = self.pool(x)
+        x = self.conv1(x)
+        x = self.maxPool1(x)
+        
+        x = self.conv2(x)
+        x = self.maxPool2(x)
+
+        x = self.conv3(x)
+        x = self.maxPool3(x)
+
+        x = self.conv4(x)
+        x = self.avgPool4(x)
+
 
         # Flatten the CNN output
         x = x.view(x.size(0), -1)
         #print(x.size)
-        #x = x.view(batch_size * seq_length, -1)
-        x = F.relu(self.fc1(x))
-        #x = self.fc2(x)
+        x = self.fc1(x)
         outputs = x.view(batch_size, seq_length, -1)
         
         ##############################################################################
@@ -64,16 +84,18 @@ class CustomCNN(nn.Module):
         
 
 class Encoder(nn.Module):
-    def __init__(self, hidden_dim=64, num_layers=2):
+    def __init__(self, hidden_dim=64, num_layers=2, cnn_output_dim = None):
         # NOTE: you can freely add hyperparameters argument
         super(Encoder, self).__init__()
         ##############################################################################
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
-        self.cnn = CustomCNN(hidden_dim)
+        if cnn_output_dim is None:
+            cnn_output_dim = hidden_dim
+        self.cnn = CustomCNN(cnn_output_dim)
         # NOTE: you can freely modify self.rnn module (ex. LSTM -> GRU)
         self.rnn = nn.LSTM(
-            input_size=hidden_dim,
+            input_size=cnn_output_dim,
             hidden_size=hidden_dim,
             num_layers=num_layers,
             batch_first=True,
@@ -163,7 +185,7 @@ class Seq2SeqModel(nn.Module):
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
         self.n_vocab = num_classes
-        self.encoder = Encoder(hidden_dim=hidden_dim, num_layers=n_rnn_layers)
+        self.encoder = Encoder(hidden_dim=hidden_dim, num_layers=n_rnn_layers, cnn_output_dim=28)
         self.decoder = Decoder(n_vocab=num_classes, hidden_dim=hidden_dim, num_layers=n_rnn_layers)
         self.device = device
         # NOTE: you can define additional parameters
