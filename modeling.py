@@ -22,21 +22,25 @@ class CustomCNN(nn.Module):
 
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(True)
         )
         self.maxPool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.conv2 = nn.Sequential(
             nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(True)
         )
         self.maxPool2 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.conv3 = nn.Sequential(
             nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
             nn.ReLU(True)
         )
         self.maxPool3 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.conv4 = nn.Sequential(
             nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
             nn.ReLU(True)
         )
         self.avgPool4 = nn.AvgPool2d(kernel_size=3, stride=1)
@@ -185,7 +189,7 @@ class Seq2SeqModel(nn.Module):
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
         self.n_vocab = num_classes
-        self.encoder = Encoder(hidden_dim=hidden_dim, num_layers=n_rnn_layers, cnn_output_dim=28)
+        self.encoder = Encoder(hidden_dim=hidden_dim, num_layers=n_rnn_layers, cnn_output_dim=26)
         self.decoder = Decoder(n_vocab=num_classes, hidden_dim=hidden_dim, num_layers=n_rnn_layers)
         self.device = device
         # NOTE: you can define additional parameters
