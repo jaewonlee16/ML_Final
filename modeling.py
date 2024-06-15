@@ -4,6 +4,8 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 from torch.distributions import Categorical
 
+from torchvision.models import resnet18
+
 class CustomCNN(nn.Module):
     def __init__(self, hidden_dim):
         # NOTE: you can freely add hyperparameters argument
@@ -47,6 +49,8 @@ class CustomCNN(nn.Module):
         height = 28
         width = 28
         self.fc1 = nn.Linear(256, hidden_dim)  # Adjust based on input size
+
+        self.resnet = resnet18(num_classes=hidden_dim)
         ##############################################################################
         #                          END OF YOUR CODE                                  #
         ##############################################################################
@@ -62,6 +66,8 @@ class CustomCNN(nn.Module):
         # Problem 1: design CNN forward path
         batch_size, seq_length, height, width, channels = inputs.size()
         x = inputs.view(batch_size * seq_length, channels, height, width)
+
+        """
         x = self.conv1(x)
         x = self.maxPool1(x)
         
@@ -79,6 +85,10 @@ class CustomCNN(nn.Module):
         x = x.view(x.size(0), -1)
         #print(x.size)
         x = self.fc1(x)
+        outputs = x.view(batch_size, seq_length, -1)
+        """
+
+        x = self.resnet(x)
         outputs = x.view(batch_size, seq_length, -1)
         
         ##############################################################################
