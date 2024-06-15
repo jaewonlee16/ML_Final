@@ -96,6 +96,82 @@ class CustomCNN(nn.Module):
         ##############################################################################
         return outputs
         
+class CustomCNN2(nn.Module):
+    def __init__(self, hidden_dim):
+        # NOTE: you can freely add hyperparameters argument
+        super(CustomCNN2, self).__init__()
+        ##############################################################################
+        #                          IMPLEMENT YOUR CODE                               #
+        ##############################################################################
+        # define cnn model
+
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=2, padding=1)
+        self.maxPool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        self.conv2 = nn.Sequential(
+            nn.BatchNorm2d(32),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1)
+        )
+        self.maxPool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        self.conv3 = nn.Sequential(
+            nn.BatchNorm2d(64),
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1)
+        )
+        self.maxPool3 = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        self.conv4 = nn.Sequential(
+            nn.BatchNorm2d(128),
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1),
+        )
+        self.fc1 = nn.Linear(256, 256) 
+        self.fc2 = nn.Linear(256, hidden_dim)  # Adjust based on input size
+
+        ##############################################################################
+        #                          END OF YOUR CODE                                  #
+        ##############################################################################
+    
+    def forward(self, inputs):
+        """
+        inputs: (Batch_size, Sequence_length, Height, Width, Channel)
+        outputs: (Batch_size, Sequence_length, Hidden_dim)
+        """
+        ##############################################################################
+        #                          IMPLEMENT YOUR CODE                               #
+        ##############################################################################
+        # Problem 1: design CNN forward path
+        batch_size, seq_length, height, width, channels = inputs.size()
+        x = inputs.view(batch_size * seq_length, channels, height, width)
+
+        x = self.conv1(x)
+        x = self.maxPool1(x)
+        
+        x = self.conv2(x)
+        x = self.maxPool2(x)
+
+        x = self.conv3(x)
+        x = self.maxPool3(x)
+
+        x = self.conv4(x)
+
+        # Flatten the CNN output
+        x = x.view(x.size(0), -1)
+        #print(x.size)
+        x = self.fc1(x)
+        x = self.fc2(x)
+        outputs = x.view(batch_size, seq_length, -1)
+
+        
+        ##############################################################################
+        #                          END OF YOUR CODE                                  #
+        ##############################################################################
+        return outputs
 
 class Encoder(nn.Module):
     def __init__(self, hidden_dim=64, num_layers=2, cnn_output_dim = None, dropout = 0.5):
@@ -106,7 +182,7 @@ class Encoder(nn.Module):
         ##############################################################################
         if cnn_output_dim is None:
             cnn_output_dim = hidden_dim
-        self.cnn = CustomCNN(cnn_output_dim)
+        self.cnn = CustomCNN2(cnn_output_dim)
         # NOTE: you can freely modify self.rnn module (ex. LSTM -> GRU)
         self.rnn = nn.LSTM(
             input_size=cnn_output_dim,
