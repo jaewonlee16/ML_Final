@@ -98,7 +98,7 @@ class CustomCNN(nn.Module):
         
 
 class Encoder(nn.Module):
-    def __init__(self, hidden_dim=64, num_layers=2, cnn_output_dim = None):
+    def __init__(self, hidden_dim=64, num_layers=2, cnn_output_dim = None, dropout = 0.5):
         # NOTE: you can freely add hyperparameters argument
         super(Encoder, self).__init__()
         ##############################################################################
@@ -112,6 +112,7 @@ class Encoder(nn.Module):
             input_size=cnn_output_dim,
             hidden_size=hidden_dim,
             num_layers=num_layers,
+            dropout=dropout,
             batch_first=True,
         )
         self.fc = nn.Linear(hidden_dim, hidden_dim)
@@ -144,19 +145,22 @@ class Encoder(nn.Module):
         
 
 class Decoder(nn.Module):
-    def __init__(self, n_vocab=28, hidden_dim=64, num_layers=2, pad_idx=0, dropout=0.5):
+    def __init__(self, n_vocab=28, hidden_dim=64, num_layers=2, pad_idx=0, dropout=0.5, embed_dim = None):
         # NOTE: you can freely add hyperparameters argument
         super(Decoder, self).__init__()
         ##############################################################################
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
         self.hidden_dim = hidden_dim
+        self.embed_dim = embed_dim
+        if self.embed_dim is None:
+            self.embed_dim = hidden_dim
         self.n_layers = num_layers
         self.n_vocab = n_vocab
-        self.embedding = nn.Embedding(n_vocab, hidden_dim, padding_idx=pad_idx)
+        self.embedding = nn.Embedding(n_vocab, embed_dim, padding_idx=pad_idx)
         # NOTE: you can freely modify self.rnn module (ex. LSTM -> GRU)
         self.rnn = nn.LSTM(
-            input_size=hidden_dim,
+            input_size=embed_dim,
             hidden_size=hidden_dim,
             num_layers=num_layers,
             dropout=dropout,
@@ -180,6 +184,7 @@ class Decoder(nn.Module):
         # Problem 2: design Decoder forward path
         # Embedding the input sequence
         embedded = self.embedding(input_seq)
+        #embedded = input_seq
         # Passing the embedded sequence through the RNN
         output, hidden_state = self.rnn(embedded, hidden_state)
         # Generating the output tokens
@@ -199,8 +204,15 @@ class Seq2SeqModel(nn.Module):
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
         self.n_vocab = num_classes
-        self.encoder = Encoder(hidden_dim=hidden_dim, num_layers=n_rnn_layers, cnn_output_dim=26)
-        self.decoder = Decoder(n_vocab=num_classes, hidden_dim=hidden_dim, num_layers=n_rnn_layers)
+        self.encoder = Encoder(hidden_dim=hidden_dim, 
+                               num_layers=n_rnn_layers, 
+                               cnn_output_dim=26, 
+                               dropout=rnn_dropout)
+        self.decoder = Decoder(n_vocab=num_classes, 
+                               hidden_dim=hidden_dim, 
+                               num_layers=n_rnn_layers, 
+                               embed_dim=28, 
+                               dropout=rnn_dropout)
         self.device = device
         # NOTE: you can define additional parameters
         ##############################################################################
