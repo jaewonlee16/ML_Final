@@ -6,6 +6,41 @@ from torch.distributions import Categorical
 
 from torchvision.models import resnet18
 
+class CustomResnet(nn.Module):
+    def __init__(self, hidden_dim):
+        # NOTE: you can freely add hyperparameters argument
+        super(CustomResnet, self).__init__()
+        ##############################################################################
+        #                          IMPLEMENT YOUR CODE                               #
+        ##############################################################################
+        # define cnn model
+
+
+        self.resnet = resnet18(num_classes=hidden_dim)
+        ##############################################################################
+        #                          END OF YOUR CODE                                  #
+        ##############################################################################
+    
+    def forward(self, inputs):
+        """
+        inputs: (Batch_size, Sequence_length, Height, Width, Channel)
+        outputs: (Batch_size, Sequence_length, Hidden_dim)
+        """
+        ##############################################################################
+        #                          IMPLEMENT YOUR CODE                               #
+        ##############################################################################
+        # Problem 1: design CNN forward path
+        batch_size, seq_length, height, width, channels = inputs.size()
+        x = inputs.view(batch_size * seq_length, channels, height, width)
+
+        x = self.resnet(x)
+        outputs = x.view(batch_size, seq_length, -1)
+        
+        ##############################################################################
+        #                          END OF YOUR CODE                                  #
+        ##############################################################################
+        return outputs
+
 class CustomCNN(nn.Module):
     def __init__(self, hidden_dim):
         # NOTE: you can freely add hyperparameters argument
@@ -50,7 +85,6 @@ class CustomCNN(nn.Module):
         width = 28
         self.fc1 = nn.Linear(256, hidden_dim)  # Adjust based on input size
 
-        self.resnet = resnet18(num_classes=hidden_dim)
         ##############################################################################
         #                          END OF YOUR CODE                                  #
         ##############################################################################
@@ -67,7 +101,6 @@ class CustomCNN(nn.Module):
         batch_size, seq_length, height, width, channels = inputs.size()
         x = inputs.view(batch_size * seq_length, channels, height, width)
 
-        """
         x = self.conv1(x)
         x = self.maxPool1(x)
         
@@ -85,10 +118,6 @@ class CustomCNN(nn.Module):
         x = x.view(x.size(0), -1)
         #print(x.size)
         x = self.fc1(x)
-        outputs = x.view(batch_size, seq_length, -1)
-        """
-
-        x = self.resnet(x)
         outputs = x.view(batch_size, seq_length, -1)
         
         ##############################################################################
@@ -174,7 +203,7 @@ class CustomCNN2(nn.Module):
         return outputs
 
 class Encoder(nn.Module):
-    def __init__(self, hidden_dim=64, num_layers=2, cnn_output_dim = None, dropout = 0.5):
+    def __init__(self, hidden_dim=64, num_layers=2, cnn_output_dim = None, dropout = 0.5, customCNN = "CustomCNN"):
         # NOTE: you can freely add hyperparameters argument
         super(Encoder, self).__init__()
         ##############################################################################
@@ -182,7 +211,8 @@ class Encoder(nn.Module):
         ##############################################################################
         if cnn_output_dim is None:
             cnn_output_dim = hidden_dim
-        self.cnn = CustomCNN2(cnn_output_dim)
+        func = globals()[customCNN]
+        self.cnn = func(cnn_output_dim)
         # NOTE: you can freely modify self.rnn module (ex. LSTM -> GRU)
         self.rnn = nn.LSTM(
             input_size=cnn_output_dim,
@@ -273,7 +303,7 @@ class Decoder(nn.Module):
 
 
 class Seq2SeqModel(nn.Module):
-    def __init__(self, num_classes=28, hidden_dim=64, n_rnn_layers=2, rnn_dropout=0.5, device = torch.device("cuda:0")):
+    def __init__(self, num_classes=28, hidden_dim=64, n_rnn_layers=2, rnn_dropout=0.5, device = torch.device("cuda:0"), customCNN = "CustomCNN"):
         # NOTE: you can freely add hyperparameters argument
         super(Seq2SeqModel, self).__init__()
         ##############################################################################
@@ -283,7 +313,8 @@ class Seq2SeqModel(nn.Module):
         self.encoder = Encoder(hidden_dim=hidden_dim, 
                                num_layers=n_rnn_layers, 
                                cnn_output_dim=26, 
-                               dropout=rnn_dropout)
+                               dropout=rnn_dropout,
+                               customCNN=customCNN)
         self.decoder = Decoder(n_vocab=num_classes, 
                                hidden_dim=hidden_dim, 
                                num_layers=n_rnn_layers, 
