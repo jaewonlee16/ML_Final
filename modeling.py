@@ -428,7 +428,7 @@ class TransformerDecoder(nn.Module):
         
         output = self.transformer_decoder(
             tgt=embedded.permute(1, 0, 2),  # Transformer expects (Seq_len, Batch, Embed_dim)
-            memory=memory.permute(1, 0, 2),  # memory from encoder (Seq_len, Batch, Embed_dim)
+            memory=memory,  # memory from encoder (Seq_len, Batch, Embed_dim)
             tgt_mask=tgt_mask,
             tgt_key_padding_mask=tgt_key_padding_mask
         )
@@ -439,7 +439,7 @@ class TransformerDecoder(nn.Module):
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim=64, num_layers=2, dropout=0.5, customCNN="CustomCNN", nhead=8):
+    def __init__(self, input_dim, hidden_dim=64, num_layers=2, dropout=0.5, customCNN="CustomCNN", nhead=2):
         super(TransformerEncoder, self).__init__()
         self.hidden_dim = hidden_dim
         func = globals()[customCNN]
@@ -458,7 +458,7 @@ class TransformerEncoder(nn.Module):
         embedded = self.positional_encoding(embedded)
         
         output = self.transformer_encoder(embedded.permute(1, 0, 2))
-        output = output.permute(1, 0, 2)  # back to (Batch_size, Seq_len, Hidden_dim)
+        #output = output.permute(1, 0, 2)  # back to (Batch_size, Seq_len, Hidden_dim)
         
         return output
 
@@ -475,7 +475,8 @@ class TransformerSeq2Seq(nn.Module):
                                num_layers=n_rnn_layers, 
                                input_dim=26, 
                                dropout=rnn_dropout,
-                               customCNN=customCNN)
+                               customCNN=customCNN,
+                               nhead=nhead)
         self.decoder = TransformerDecoder(n_vocab=num_classes, 
                                hidden_dim=hidden_dim, 
                                num_layers=n_rnn_layers, 
