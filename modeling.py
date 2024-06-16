@@ -251,7 +251,7 @@ class Encoder(nn.Module):
         
 
 class Decoder(nn.Module):
-    def __init__(self, n_vocab=28, hidden_dim=64, num_layers=2, pad_idx=0, dropout=0.5, embed_dim = None):
+    def __init__(self, n_vocab=28, hidden_dim=64, num_layers=2, pad_idx=0, dropout=0.5, embed_dim = None, nhead=None):
         # NOTE: you can freely add hyperparameters argument
         super(Decoder, self).__init__()
         ##############################################################################
@@ -299,11 +299,12 @@ class Decoder(nn.Module):
         ##############################################################################
         #                          END OF YOUR CODE                                  #
         ##############################################################################
-        return output, hidden_state
+        return output
 
 
 class Seq2SeqModel(nn.Module):
-    def __init__(self, num_classes=28, hidden_dim=64, n_rnn_layers=2, rnn_dropout=0.5, device = torch.device("cuda:0"), customCNN = "CustomCNN"):
+    def __init__(self, num_classes=28, hidden_dim=64, n_rnn_layers=2, embed_dim = 28, rnn_dropout=0.5, 
+                 device = torch.device("cuda:0"), customCNN = "CustomCNN", nhead=8):
         # NOTE: you can freely add hyperparameters argument
         super(Seq2SeqModel, self).__init__()
         ##############################################################################
@@ -318,7 +319,7 @@ class Seq2SeqModel(nn.Module):
         self.decoder = Decoder(n_vocab=num_classes, 
                                hidden_dim=hidden_dim, 
                                num_layers=n_rnn_layers, 
-                               embed_dim=28, 
+                               embed_dim=embed_dim, 
                                dropout=rnn_dropout)
         self.device = device
         # NOTE: you can define additional parameters
@@ -345,26 +346,12 @@ class Seq2SeqModel(nn.Module):
         #print(hidden_state[1].shape)
         
         # Decode the encoded sequence
-        logits, hidden_state = self.decoder(inp_seq, hidden_state)
+        logits = self.decoder(inp_seq, hidden_state)
 
-        """
-        # New
-        Batch_size, Sequence_length = inp_seq.shape
-        logits = torch.zeros(Batch_size, Sequence_length, self.n_vocab).to(self.device)
-        input = inp_seq[:, :1]
-        for t in range(1, Sequence_length):
-            #print(f"{input.shape=}")
-            output, hidden_state = self.decoder(input, hidden_state)
-            #print(hidden_state[0].shape)
-            #print(hidden_state[1].shape)
-            logits[:, t, :] = output.squeeze(1)
-            input = inp_seq[:, t-1 : t]
-        """
-        
         ##############################################################################
         #                          END OF YOUR CODE                                  #
         ##############################################################################
-        return logits, hidden_state
+        return logits
 
     def generate(self, inputs, lengths, inp_seq, max_length):
         """
@@ -404,3 +391,134 @@ class Seq2SeqModel(nn.Module):
 
 # NOTE: you can freely add and define other modules and models
 # ex. TransformerDecoder, Seq2SeqTransformerModel, Attention, etc.
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, embed_dim, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.encoding = torch.zeros(max_len, embed_dim)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, embed_dim, 2).float() * (-torch.log(torch.tensor(10000.0)) / embed_dim))
+        self.encoding[:, 0::2] = torch.sin(position * div_term)
+        self.encoding[:, 1::2] = torch.cos(position * div_term)
+        self.encoding = self.encoding.unsqueeze(0)  # shape (1, max_len, embed_dim)
+    
+    def forward(self, x):
+        seq_len = x.size(1)
+        return x + self.encoding[:, :seq_len, :].to(x.device)
+
+
+class TransformerDecoder(nn.Module):
+    def __init__(self, n_vocab=28, hidden_dim=64, num_layers=2, pad_idx=0, dropout=0.5, embed_dim=None, nhead=8):
+        super(TransformerDecoder, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.embed_dim = embed_dim or hidden_dim
+        self.n_layers = num_layers
+        self.n_vocab = n_vocab
+        
+        self.embedding = nn.Embedding(n_vocab, self.embed_dim, padding_idx=pad_idx)
+        self.positional_encoding = PositionalEncoding(self.embed_dim)
+        
+        decoder_layer = nn.TransformerDecoderLayer(d_model=self.embed_dim, nhead=nhead, dropout=dropout)
+        self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
+        self.lm_head = nn.Linear(self.embed_dim, n_vocab)
+        
+    def forward(self, input_seq, memory, tgt_mask=None, tgt_key_padding_mask=None):
+        embedded = self.embedding(input_seq)
+        embedded = self.positional_encoding(embedded)
+        
+        output = self.transformer_decoder(
+            tgt=embedded.permute(1, 0, 2),  # Transformer expects (Seq_len, Batch, Embed_dim)
+            memory=memory.permute(1, 0, 2),  # memory from encoder (Seq_len, Batch, Embed_dim)
+            tgt_mask=tgt_mask,
+            tgt_key_padding_mask=tgt_key_padding_mask
+        )
+        
+        output = self.lm_head(output.transpose(0, 1))  # back to (Batch, Seq_len, N_vocab)
+        
+        return output
+
+
+class TransformerSeq2Seq(nn.Module):
+    def __init__(self, num_classes=28, hidden_dim=64, n_rnn_layers=2, embed_dim = 28, rnn_dropout=0.5, 
+                 device = torch.device("cuda:0"), customCNN = "CustomCNN", nhead=8):
+        # NOTE: you can freely add hyperparameters argument
+        super(TransformerSeq2Seq, self).__init__()
+        ##############################################################################
+        #                          IMPLEMENT YOUR CODE                               #
+        ##############################################################################
+        self.n_vocab = num_classes
+        self.encoder = Encoder(hidden_dim=hidden_dim, 
+                               num_layers=n_rnn_layers, 
+                               cnn_output_dim=26, 
+                               dropout=rnn_dropout,
+                               customCNN=customCNN)
+        self.decoder = TransformerDecoder(n_vocab=num_classes, 
+                               hidden_dim=hidden_dim, 
+                               num_layers=n_rnn_layers, 
+                               embed_dim=hidden_dim, 
+                               dropout=rnn_dropout,
+                               nhead=nhead)
+        self.device = device
+        # NOTE: you can define additional parameters
+        ##############################################################################
+        #                          END OF YOUR CODE                                  #
+        ##############################################################################
+    
+    def forward(self, inputs, lengths, inp_seq):
+        """
+        inputs: (Batch_size, Sequence_length, Height, Width, Channel)
+        lengths: (Batch_size,)
+        inp_seq: (Batch_size, Sequence_length)
+        logits: (Batch_size, Sequence_length, N_vocab)
+        hidden_state: ((Num_layers, Batch_size, Hidden_dim), (Num_layers, Batch_size, Hidden_dim)) (tuple of h_n and c_n)
+        """
+        ##############################################################################
+        #                          IMPLEMENT YOUR CODE                               #
+        ##############################################################################
+        # Problem 3: design Seq2SeqModel forward path using encoder and decoder
+        
+        # Encode the input sequence
+        encoder_outputs, hidden_state = self.encoder(inputs, lengths)
+        
+        # Decode the encoded sequence
+        logits = self.decoder(inp_seq, encoder_outputs)
+
+        ##############################################################################
+        #                          END OF YOUR CODE                                  #
+        ##############################################################################
+        return logits
+
+    def generate(self, inputs, lengths, inp_seq, max_length):
+        """
+        inputs: (Batch_size, Sequence_length, Height, Width, Channel)
+        lengths: (Batch_size,)
+        inp_seq: (Batch_size, 1)
+        max_length -> a single integer number (ex. 10)
+        generated_tok: (Batch_size, max_length) -> long dtype tensor
+        """
+        ##############################################################################
+        #                          IMPLEMENT YOUR CODE                               #
+        ##############################################################################
+        # Problem 4: design generate function of Seq2SeqModel
+
+        encoder_outputs, encoder_hidden = self.encoder(inputs, lengths)
+        
+        # Initialize the input for the decoder with the start token
+        dec_input = inp_seq
+        dec_hidden = encoder_hidden
+        
+        generated_tok = []
+        
+        for t in range(max_length):
+            logits = self.decoder(dec_input, encoder_outputs)
+            predicted_token = logits.argmax(2)
+            generated_tok.append(predicted_token)
+            
+            dec_input = predicted_token
+        
+        generated_tok = torch.cat(generated_tok, dim=1)
+        
+        ##############################################################################
+        #                          END OF YOUR CODE                                  #
+        ##############################################################################
+        return generated_tok
