@@ -296,9 +296,7 @@ class Decoder(nn.Module):
         #embedded = input_seq
         # Passing the embedded sequence through the RNN
         output, hidden_state = self.rnn(embedded, hidden_state)
-        print(f"{output.shape=}")
         output = torch.cat((output, cnn3_outputs), dim = 2)
-        print(f"{output.shape=}")
         # Generating the output tokens
         output = self.lm_head(output)
         
