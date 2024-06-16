@@ -438,6 +438,30 @@ class TransformerDecoder(nn.Module):
         return output
 
 
+class TransformerEncoder(nn.Module):
+    def __init__(self, input_dim, hidden_dim=64, num_layers=2, dropout=0.5, customCNN="CustomCNN", nhead=8):
+        super(TransformerEncoder, self).__init__()
+        self.hidden_dim = hidden_dim
+        func = globals()[customCNN]
+        self.cnn = func(input_dim)
+        self.embedding = nn.Linear(input_dim, hidden_dim)
+        self.positional_encoding = PositionalEncoding(hidden_dim)
+
+        encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=nhead, dropout=dropout)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        
+    def forward(self, inputs, lengths):
+        x = self.cnn(inputs)
+        #packed_input = pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
+        
+        embedded = self.embedding(x)  # (Batch_size, Seq_len, Hidden_dim)
+        embedded = self.positional_encoding(embedded)
+        
+        output = self.transformer_encoder(embedded.permute(1, 0, 2))
+        output = output.permute(1, 0, 2)  # back to (Batch_size, Seq_len, Hidden_dim)
+        
+        return output
+
 class TransformerSeq2Seq(nn.Module):
     def __init__(self, num_classes=28, hidden_dim=64, n_rnn_layers=2, embed_dim = 28, rnn_dropout=0.5, 
                  device = torch.device("cuda:0"), customCNN = "CustomCNN", nhead=8):
@@ -447,9 +471,9 @@ class TransformerSeq2Seq(nn.Module):
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
         self.n_vocab = num_classes
-        self.encoder = Encoder(hidden_dim=hidden_dim, 
+        self.encoder = TransformerEncoder(hidden_dim=hidden_dim, 
                                num_layers=n_rnn_layers, 
-                               cnn_output_dim=26, 
+                               input_dim=26, 
                                dropout=rnn_dropout,
                                customCNN=customCNN)
         self.decoder = TransformerDecoder(n_vocab=num_classes, 
@@ -478,7 +502,7 @@ class TransformerSeq2Seq(nn.Module):
         # Problem 3: design Seq2SeqModel forward path using encoder and decoder
         
         # Encode the input sequence
-        encoder_outputs, hidden_state = self.encoder(inputs, lengths)
+        encoder_outputs = self.encoder(inputs, lengths)
         
         # Decode the encoded sequence
         logits = self.decoder(inp_seq, encoder_outputs)
@@ -501,11 +525,10 @@ class TransformerSeq2Seq(nn.Module):
         ##############################################################################
         # Problem 4: design generate function of Seq2SeqModel
 
-        encoder_outputs, encoder_hidden = self.encoder(inputs, lengths)
+        encoder_outputs = self.encoder(inputs, lengths)
         
         # Initialize the input for the decoder with the start token
         dec_input = inp_seq
-        dec_hidden = encoder_hidden
         
         generated_tok = []
         
