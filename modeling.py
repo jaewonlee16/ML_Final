@@ -203,7 +203,7 @@ class CustomCNN2(nn.Module):
         return outputs
 
 class Encoder(nn.Module):
-    def __init__(self, hidden_dim=64, num_layers=2, cnn_output_dim = None, dropout = 0.5, customCNN = "CustomCNN"):
+    def __init__(self, hidden_dim=64, num_layers=2, cnn_output_dim = None, dropout = 0.5, customCNN = "CustomCNN", convld_dim=26):
         # NOTE: you can freely add hyperparameters argument
         super(Encoder, self).__init__()
         ##############################################################################
@@ -222,7 +222,7 @@ class Encoder(nn.Module):
             batch_first=True,
         )
         #self.fc = nn.Linear(hidden_dim, hidden_dim)
-        self.conv1d = nn.Conv1d(in_channels=cnn_output_dim, out_channels=3, kernel_size=3, stride=1, padding=1)
+        self.conv1d = nn.Conv1d(in_channels=cnn_output_dim, out_channels=convld_dim, kernel_size=3, stride=1, padding=1)
         # NOTE: you can define additional parameters
         ##############################################################################
         #                          END OF YOUR CODE                                  #
@@ -254,7 +254,8 @@ class Encoder(nn.Module):
         
 
 class Decoder(nn.Module):
-    def __init__(self, n_vocab=28, hidden_dim=64, num_layers=2, pad_idx=0, dropout=0.5, embed_dim = None, nhead=None):
+    def __init__(self, n_vocab=28, hidden_dim=64, num_layers=2, pad_idx=0, dropout=0.5,
+                 embed_dim = None, nhead=None, fc_hidden = 3, conv1d_dim=26):
         # NOTE: you can freely add hyperparameters argument
         super(Decoder, self).__init__()
         ##############################################################################
@@ -275,7 +276,15 @@ class Decoder(nn.Module):
             dropout=dropout,
             batch_first=True,
         )
-        self.lm_head = nn.Linear(hidden_dim + 3, n_vocab)
+        self.fc1 = nn.Sequential(
+            nn.Linear(hidden_dim, fc_hidden),
+            nn.ReLU()
+        )
+        self.fc2 = nn.Sequential(
+            nn.Linear(fc_hidden + conv1d_dim, fc_hidden + conv1d_dim),
+            nn.ReLU()
+        )
+        self.lm_head = nn.Linear(fc_hidden + conv1d_dim, n_vocab)
         # NOTE: you can define additional parameters
         ##############################################################################
         #                          END OF YOUR CODE                                  #
@@ -296,7 +305,9 @@ class Decoder(nn.Module):
         #embedded = input_seq
         # Passing the embedded sequence through the RNN
         output, hidden_state = self.rnn(embedded, hidden_state)
+        output = self.fc1(output)
         output = torch.cat((output, cnn3_outputs), dim = 2)
+        output = self.fc2(output)
         # Generating the output tokens
         output = self.lm_head(output)
         
@@ -308,7 +319,7 @@ class Decoder(nn.Module):
 
 class Seq2SeqModel(nn.Module):
     def __init__(self, num_classes=28, hidden_dim=64, n_rnn_layers=2, embed_dim = 28, rnn_dropout=0.5, 
-                 device = torch.device("cuda:0"), customCNN = "CustomCNN", nhead=8):
+                 device = torch.device("cuda:0"), customCNN = "CustomCNN", nhead=8, conv1d_dim=26, dec_fc_dim=3):
         # NOTE: you can freely add hyperparameters argument
         super(Seq2SeqModel, self).__init__()
         ##############################################################################
@@ -319,12 +330,15 @@ class Seq2SeqModel(nn.Module):
                                num_layers=n_rnn_layers, 
                                cnn_output_dim=26, 
                                dropout=rnn_dropout,
-                               customCNN=customCNN)
+                               customCNN=customCNN,
+                               convld_dim=conv1d_dim)
         self.decoder = Decoder(n_vocab=num_classes, 
                                hidden_dim=hidden_dim, 
                                num_layers=n_rnn_layers, 
                                embed_dim=embed_dim, 
-                               dropout=rnn_dropout)
+                               dropout=rnn_dropout,
+                               conv1d_dim=conv1d_dim,
+                               fc_hidden=dec_fc_dim)
         self.device = device
         # NOTE: you can define additional parameters
         ##############################################################################
@@ -379,7 +393,7 @@ class Seq2SeqModel(nn.Module):
         generated_tok = []
         
         for t in range(max_length):
-            logits, dec_hidden = self.decoder(dec_input, dec_hidden)
+            logits, dec_hidden = self.decoder(dec_input, dec_hidden, cnn3_outputs[:, t, :])
             predicted_token = logits.argmax(2)
             generated_tok.append(predicted_token)
             
