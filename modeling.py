@@ -221,7 +221,8 @@ class Encoder(nn.Module):
             dropout=dropout,
             batch_first=True,
         )
-        self.fc = nn.Linear(hidden_dim, hidden_dim)
+        #self.fc = nn.Linear(hidden_dim, hidden_dim)
+        self.conv1d = nn.Conv1d(in_channels=cnn_output_dim, out_channels=3, kernel_size=3, stride=1, padding=1)
         # NOTE: you can define additional parameters
         ##############################################################################
         #                          END OF YOUR CODE                                  #
@@ -238,10 +239,12 @@ class Encoder(nn.Module):
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
         x = self.cnn(inputs)
+        output = self.conv1d(x.permute(0, 2, 1)).permute(0, 2, 1)
         packed_input = pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
+        #print(packed_input.data.shape)
         packed_output, hidden_state = self.rnn(packed_input)
-        output, _ = pad_packed_sequence(packed_output, batch_first=True)
-        output = self.fc(output)
+        #output, _ = pad_packed_sequence(packed_output, batch_first=True)
+        #output = self.fc(output)
         # NOTE: you can utilize additional parameters
         ##############################################################################
         #                          END OF YOUR CODE                                  #
@@ -272,13 +275,13 @@ class Decoder(nn.Module):
             dropout=dropout,
             batch_first=True,
         )
-        self.lm_head = nn.Linear(hidden_dim, n_vocab)
+        self.lm_head = nn.Linear(hidden_dim + 3, n_vocab)
         # NOTE: you can define additional parameters
         ##############################################################################
         #                          END OF YOUR CODE                                  #
         ##############################################################################
 
-    def forward(self, input_seq, hidden_state):
+    def forward(self, input_seq, hidden_state, cnn3_outputs):
         """
         input_seq: (Batch_size, Sequence_length)
         output: (Batch_size, Sequence_length, N_vocab)
@@ -293,6 +296,9 @@ class Decoder(nn.Module):
         #embedded = input_seq
         # Passing the embedded sequence through the RNN
         output, hidden_state = self.rnn(embedded, hidden_state)
+        print(f"{output.shape=}")
+        output = torch.cat((output, cnn3_outputs), dim = 2)
+        print(f"{output.shape=}")
         # Generating the output tokens
         output = self.lm_head(output)
         
@@ -341,12 +347,12 @@ class Seq2SeqModel(nn.Module):
         # Problem 3: design Seq2SeqModel forward path using encoder and decoder
         
         # Encode the input sequence
-        encoder_outputs, hidden_state = self.encoder(inputs, lengths)
-        #print(hidden_state[0].shape)
-        #print(hidden_state[1].shape)
+        cnn3_outputs, hidden_state = self.encoder(inputs, lengths)
+        #print(f"{cnn3_outputs.shape=}")
+        #print(inp_seq[0, :])
         
         # Decode the encoded sequence
-        logits = self.decoder(inp_seq, hidden_state)
+        logits = self.decoder(inp_seq, hidden_state, cnn3_outputs)
 
         ##############################################################################
         #                          END OF YOUR CODE                                  #
@@ -366,7 +372,7 @@ class Seq2SeqModel(nn.Module):
         ##############################################################################
         # Problem 4: design generate function of Seq2SeqModel
 
-        encoder_outputs, encoder_hidden = self.encoder(inputs, lengths)
+        cnn3_outputs, encoder_hidden = self.encoder(inputs, lengths)
         
         # Initialize the input for the decoder with the start token
         dec_input = inp_seq
@@ -444,7 +450,7 @@ class TransformerEncoder(nn.Module):
         self.hidden_dim = hidden_dim
         func = globals()[customCNN]
         self.cnn = func(input_dim)
-        self.embedding = nn.Linear(input_dim, hidden_dim)
+        self.embedding = nn.Linear(input_dim, hidden_dim, padding_idx=0)
         self.positional_encoding = PositionalEncoding(hidden_dim)
 
         encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=nhead, dropout=dropout)
@@ -473,7 +479,7 @@ class TransformerSeq2Seq(nn.Module):
         self.n_vocab = num_classes
         self.encoder = TransformerEncoder(hidden_dim=hidden_dim, 
                                num_layers=n_rnn_layers, 
-                               input_dim=26, 
+                               input_dim=hidden_dim, 
                                dropout=rnn_dropout,
                                customCNN=customCNN,
                                nhead=nhead)
