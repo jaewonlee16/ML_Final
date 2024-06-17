@@ -467,20 +467,24 @@ class TransformerEncoder(nn.Module):
         self.hidden_dim = hidden_dim
         func = globals()[customCNN]
         self.cnn = func(input_dim)
-        self.embedding = nn.Linear(input_dim, hidden_dim, padding_idx=0)
+        #self.embedding = nn.Embedding(input_dim, hidden_dim, padding_idx=0)
         self.positional_encoding = PositionalEncoding(hidden_dim)
 
         encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=nhead, dropout=dropout)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         
-    def forward(self, inputs, lengths):
+    def forward(self, inputs, lengths, max_seq_len=10):
+        batch_size, seq_len, h, w, c = inputs.shape
+        src_key_padding_mask = torch.ones((batch_size, max_seq_len), device=inputs.device, dtype=torch.bool)
+        for i, length in enumerate(lengths.type(torch.int32)):
+            src_key_padding_mask[i, :length] = False
         x = self.cnn(inputs)
         #packed_input = pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
         
-        embedded = self.embedding(x)  # (Batch_size, Seq_len, Hidden_dim)
-        embedded = self.positional_encoding(embedded)
+        #embedded = self.embedding(x)  # (Batch_size, Seq_len, Hidden_dim)
+        embedded = self.positional_encoding(x)
         
-        output = self.transformer_encoder(embedded.permute(1, 0, 2))
+        output = self.transformer_encoder(embedded.permute(1, 0, 2), src_key_padding_mask=src_key_padding_mask)
         #output = output.permute(1, 0, 2)  # back to (Batch_size, Seq_len, Hidden_dim)
         
         return output
@@ -512,7 +516,7 @@ class TransformerSeq2Seq(nn.Module):
         #                          END OF YOUR CODE                                  #
         ##############################################################################
     
-    def forward(self, inputs, lengths, inp_seq):
+    def forward(self, inputs, lengths, inp_seq, max_seq_len=10):
         """
         inputs: (Batch_size, Sequence_length, Height, Width, Channel)
         lengths: (Batch_size,)
@@ -569,3 +573,16 @@ class TransformerSeq2Seq(nn.Module):
         #                          END OF YOUR CODE                                  #
         ##############################################################################
         return generated_tok
+    
+    def pad_and_create_mask(self, inputs, lengths):
+        batch_size, seq_len, h, w, c = inputs.shape
+        max_seq_len = max(lengths)
+        
+        padded_inputs = torch.zeros((batch_size, max_seq_len, h, w, c), device=inputs.device)
+        src_key_padding_mask = torch.ones((batch_size, max_seq_len), device=inputs.device, dtype=torch.bool)
+        
+        for i, length in enumerate(lengths):
+            padded_inputs[i, :length] = inputs[i, :length]
+            src_key_padding_mask[i, :length] = False
+        
+        return padded_inputs, src_key_padding_mask
