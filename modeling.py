@@ -319,7 +319,7 @@ class Decoder(nn.Module):
         ##############################################################################
         #                          END OF YOUR CODE                                  #
         ##############################################################################
-        return output
+        return output, hidden_state
 
 
 class Seq2SeqModel(nn.Module):
@@ -444,10 +444,29 @@ class TransformerDecoder(nn.Module):
         decoder_layer = nn.TransformerDecoderLayer(d_model=self.embed_dim, nhead=nhead, dropout=dropout)
         self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
         self.lm_head = nn.Linear(self.embed_dim, n_vocab)
+
+    def generate_square_subsequent_mask(self, sz):
+        mask = torch.triu(torch.ones(sz, sz), diagonal=1)
+        mask = mask.masked_fill(mask == 1, float('-inf'))
+        mask = mask.masked_fill(mask == 0, float(0.0))
+        return mask
+    
+    def create_pad_mask(self, tgt: torch.Tensor, pad_idx: int) -> torch.Tensor:
+        # 패딩 토큰 위치를 -inf, 나머지를 0.0으로 설정한 마스크를 생성
+        mask = (tgt == pad_idx).float()
+        mask = mask.masked_fill(mask == 1, float('-inf'))
+        mask = mask.masked_fill(mask == 0, float(0.0))
+        return mask
         
     def forward(self, input_seq, memory, tgt_mask=None, tgt_key_padding_mask=None):
         embedded = self.embedding(input_seq)
         embedded = self.positional_encoding(embedded)
+
+        if tgt_mask is None:
+            tgt_mask = self.generate_square_subsequent_mask(input_seq.shape[1])
+        
+        if tgt_key_padding_mask is None:
+            tgt_key_padding_mask = self.create_pad_mask(input_seq, )
         
         output = self.transformer_decoder(
             tgt=embedded.permute(1, 0, 2),  # Transformer expects (Seq_len, Batch, Embed_dim)
