@@ -463,10 +463,10 @@ class TransformerDecoder(nn.Module):
         embedded = self.positional_encoding(embedded)
 
         if tgt_mask is None:
-            tgt_mask = self.generate_square_subsequent_mask(input_seq.shape[1])
+            tgt_mask = self.generate_square_subsequent_mask(input_seq.shape[1]).to(input_seq.device)
         
         if tgt_key_padding_mask is None:
-            tgt_key_padding_mask = self.create_pad_mask(input_seq, )
+            tgt_key_padding_mask = self.create_pad_mask(input_seq, 0)
         
         output = self.transformer_decoder(
             tgt=embedded.permute(1, 0, 2),  # Transformer expects (Seq_len, Batch, Embed_dim)
