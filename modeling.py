@@ -276,17 +276,6 @@ class Decoder(nn.Module):
             dropout=dropout,
             batch_first=True,
         )
-        """
-        self.fc1 = nn.Sequential(
-            nn.Linear(hidden_dim, fc_hidden),
-            nn.ReLU()
-        )
-        self.fc2 = nn.Sequential(
-            nn.Linear(fc_hidden + conv1d_dim, fc_hidden + conv1d_dim),
-            nn.ReLU()
-        )
-        self.lm_head = nn.Linear(fc_hidden + conv1d_dim, n_vocab)
-        """
         self.lm_head = nn.Linear(hidden_dim, n_vocab)
         # NOTE: you can define additional parameters
         ##############################################################################
@@ -369,7 +358,7 @@ class Seq2SeqModel(nn.Module):
         #print(inp_seq[0, :])
         
         # Decode the encoded sequence
-        logits = self.decoder(inp_seq, hidden_state, cnn3_outputs)
+        logits, _ = self.decoder(inp_seq, hidden_state, cnn3_outputs)
 
         ##############################################################################
         #                          END OF YOUR CODE                                  #
