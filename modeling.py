@@ -566,7 +566,7 @@ class TransformerSeq2Seq(nn.Module):
         inp_seq: (Batch_size, 1)
         max_length -> a single integer number (ex. 10)
         generated_tok: (Batch_size, max_length) -> long dtype tensor
-        """
+        
         ##############################################################################
         #                          IMPLEMENT YOUR CODE                               #
         ##############################################################################
@@ -587,6 +587,18 @@ class TransformerSeq2Seq(nn.Module):
             dec_input = predicted_token
         
         generated_tok = torch.cat(generated_tok, dim=1)
+        """
+        encoder_output = self.encoder(inputs, lengths)
+        generated_tok = inp_seq
+
+        for step in range(max_length):
+            tgt_mask = self.decoder.generate_square_subsequent_mask(generated_tok.size(1)).to(inp_seq.device)
+            tgt_key_padding_mask = self.decoder.create_pad_mask(generated_tok, 0).to(inp_seq.device)
+            output = self.decoder(generated_tok, encoder_output, tgt_mask=tgt_mask, tgt_key_padding_mask=tgt_key_padding_mask)
+            predicted_token = output[:, -1:].argmax(2)
+            generated_tok = torch.cat((generated_tok, predicted_token), dim=1)
+
+        return generated_tok[:, 1:]
         
         ##############################################################################
         #                          END OF YOUR CODE                                  #
@@ -605,3 +617,6 @@ class TransformerSeq2Seq(nn.Module):
             src_key_padding_mask[i, :length] = False
         
         return padded_inputs, src_key_padding_mask
+    
+
+    def generate(self, inputs, lengths, inp_seq, max_length):
