@@ -276,6 +276,7 @@ class Decoder(nn.Module):
             dropout=dropout,
             batch_first=True,
         )
+        """
         self.fc1 = nn.Sequential(
             nn.Linear(hidden_dim, fc_hidden),
             nn.ReLU()
@@ -285,6 +286,8 @@ class Decoder(nn.Module):
             nn.ReLU()
         )
         self.lm_head = nn.Linear(fc_hidden + conv1d_dim, n_vocab)
+        """
+        self.lm_head = nn.Linear(hidden_dim, n_vocab)
         # NOTE: you can define additional parameters
         ##############################################################################
         #                          END OF YOUR CODE                                  #
@@ -305,9 +308,11 @@ class Decoder(nn.Module):
         #embedded = input_seq
         # Passing the embedded sequence through the RNN
         output, hidden_state = self.rnn(embedded, hidden_state)
+        """
         output = self.fc1(output)
         output = torch.cat((output, cnn3_outputs), dim = 2)
         output = self.fc2(output)
+        """
         # Generating the output tokens
         output = self.lm_head(output)
         
@@ -337,7 +342,7 @@ class Seq2SeqModel(nn.Module):
                                num_layers=n_rnn_layers, 
                                embed_dim=embed_dim, 
                                dropout=rnn_dropout,
-                               conv1d_dim=conv1d_dim,
+                               conv1d_dim=0,
                                fc_hidden=dec_fc_dim)
         self.device = device
         # NOTE: you can define additional parameters
