@@ -618,5 +618,3 @@ class TransformerSeq2Seq(nn.Module):
         
         return padded_inputs, src_key_padding_mask
     
-
-    def generate(self, inputs, lengths, inp_seq, max_length):
