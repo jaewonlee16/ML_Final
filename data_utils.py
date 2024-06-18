@@ -9,11 +9,12 @@ import numpy as np
 import json
 
 class trainMLDataset(Dataset):
-    def __init__(self, img_path, label_path, transform=None):
+    def __init__(self, img_path, label_path, max_seq_len = 10, transform=None):
         self.path = img_path
         with open(label_path, 'r') as f:
             self.labels = json.load(f)
         self.transform = transform
+        self.max_seq_len = max_seq_len
 
     def __len__(self):
         return len(self.labels)
@@ -28,30 +29,20 @@ class trainMLDataset(Dataset):
         # Apply data augmentation to each image if transform is provided
         if self.transform:
 
-            #imgs = np.array([np.array(self.transform(Image.fromarray(img))) for img in imgs])
             imgs = np.array([self.transform(transforms.ToPILImage()(img.permute(2, 0, 1))).permute(1, 2, 0) for img in imgs])
             
-        
-        """
-        # Padding images to length 10
-        if seq_length < 10:
-            padding = np.zeros((10 - seq_length, 28, 28, 3))
-            imgs = np.vstack((imgs, padding))
-        if len(label) < 10:
-            label.extend([0] * (10 - len(label)))  # Assuming 0 is the padding index for labels
-        """
 
         # Padding images and labels to length 10 at random positions
-        new_seq_length = 10
-        if seq_length < 10:
-            num_padding = 10 - seq_length
-            padding_positions = sorted(random.sample(range(10), num_padding))
+        new_seq_length = self.max_seq_len
+        if seq_length < self.max_seq_len:
+            num_padding = self.max_seq_len - seq_length
+            padding_positions = sorted(random.sample(range(self.max_seq_len), num_padding))
 
-            padded_imgs = np.zeros((10, 28, 28, 3), dtype=np.float32)
-            padded_labels = np.zeros(10, dtype=np.int32)
+            padded_imgs = np.zeros((self.max_seq_len, 28, 28, 3), dtype=np.float32)
+            padded_labels = np.zeros(self.max_seq_len, dtype=np.int32)
             img_idx = 0
             label_idx = 0
-            for i in range(10):
+            for i in range(self.max_seq_len):
                 if i not in padding_positions:
                     padded_imgs[i] = imgs[img_idx]
                     if label:
