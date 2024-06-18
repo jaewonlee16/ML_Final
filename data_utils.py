@@ -8,7 +8,7 @@ import random
 import numpy as np
 import json
 
-class MLDataset(Dataset):
+class trainMLDataset(Dataset):
     def __init__(self, img_path, label_path, transform=None):
         self.path = img_path
         with open(label_path, 'r') as f:
@@ -64,6 +64,39 @@ class MLDataset(Dataset):
             label = padded_labels
 
         return torch.tensor(imgs, dtype=torch.float32), torch.tensor(label, dtype=torch.long), new_seq_length
+
+class MLDataset(Dataset):
+    def __init__(self, img_path, label_path, transform=None):
+        self.path = img_path
+        with open(label_path, 'r') as f:
+            self.labels = json.load(f)
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, idx):
+        imgs = np.load(f"{self.path}/{idx}.npy")
+
+        seq_length = imgs.shape[0]
+        label = self.labels[str(idx)]
+        imgs = torch.tensor(imgs, dtype=torch.float32)
+        
+        # Padding images to length 10 at random positions
+        if seq_length < 10:
+            num_padding = 10 - seq_length
+            padding_positions = sorted(random.sample(range(10), num_padding))
+
+            padded_imgs = np.zeros((10, 28, 28, 3), dtype=np.float32)
+            img_idx = 0
+            for i in range(10):
+                if i not in padding_positions:
+                    padded_imgs[i] = imgs[img_idx]
+                    img_idx += 1
+            imgs = padded_imgs
+
+
+        return torch.tensor(imgs, dtype=torch.float32), torch.tensor(label, dtype=torch.long), seq_length
 
 def collate_fn(batch, transform=None):
     sequences, targets, lengths = zip(*batch)
