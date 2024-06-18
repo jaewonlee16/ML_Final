@@ -609,7 +609,7 @@ class TransformerSeq2Seq(nn.Module):
         
         return padded_inputs, src_key_padding_mask
     
-    def remove_zeros_shift_left(tensor):
+    def remove_zeros_shift_left(self, tensor):
         # List to store the new rows
         new_rows = []
     
@@ -619,11 +619,11 @@ class TransformerSeq2Seq(nn.Module):
             # Calculate the number of zeros to append
             num_zeros = len(row) - len(non_zeros)
             # Create the new row with non-zeros followed by zeros
-            new_row = torch.cat((non_zeros, torch.zeros(num_zeros, dtype=row.dtype)))
+            new_row = torch.cat((non_zeros, torch.zeros(num_zeros, dtype=row.dtype, device=row.device)))
             new_rows.append(new_row)
     
         # Stack the new rows to form the modified tensor
-        new_tensor = torch.stack(new_rows)
+        new_tensor = torch.stack(new_rows).to(self.device)
     
         return new_tensor
     
