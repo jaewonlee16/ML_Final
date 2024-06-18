@@ -54,7 +54,8 @@ class MLDataset(Dataset):
             for i in range(10):
                 if i not in padding_positions:
                     padded_imgs[i] = imgs[img_idx]
-                    padded_labels[i] = label[label_idx]
+                    if label:
+                        padded_labels[i] = label[label_idx]
                     img_idx += 1
                     label_idx += 1
                     if img_idx == seq_length:
