@@ -23,15 +23,15 @@ class MLDataset(Dataset):
 
         seq_length = imgs.shape[0]
         label = self.labels[str(idx)]
-        """
+        imgs = torch.tensor(imgs, dtype=torch.float32)
+        
         # Apply data augmentation to each image if transform is provided
         if self.transform:
-            print(f"{imgs[0].shape}")
-            trans_img = self.transform(imgs[0])
-            print(f"{trans_img.shape}")
+
             #imgs = np.array([np.array(self.transform(Image.fromarray(img))) for img in imgs])
-            imgs = np.array([self.transform(img) for img in imgs])
-        """
+            imgs = np.array([self.transform(transforms.ToPILImage()(img.permute(2, 0, 1))).permute(1, 2, 0) for img in imgs])
+            
+        
         # Padding images to length 10
         if seq_length < 10:
             padding = np.zeros((10 - seq_length, 28, 28, 3))
@@ -58,6 +58,6 @@ def collate_fn(batch, transform=None):
 augmentation_transforms = transforms.Compose([
     transforms.RandomRotation(20),  # Rotate the image by up to 10 degrees
     transforms.RandomResizedCrop(28, scale=(0.8, 1.0)),  # Randomly crop and resize the image
-    transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.2),  # Random color adjustments
+    transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.3),  # Random color adjustments
     transforms.ToTensor()  # Convert the image to a tensor
 ])
