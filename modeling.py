@@ -588,6 +588,7 @@ class TransformerSeq2Seq(nn.Module):
             predicted_token = output[:, -1:].argmax(2)
             generated_tok = torch.cat((generated_tok, predicted_token), dim=1)
 
+        generated_tok = self.remove_zeros_shift_left(generated_tok)
         return generated_tok[:, 1:]
         
         ##############################################################################
@@ -607,4 +608,22 @@ class TransformerSeq2Seq(nn.Module):
             src_key_padding_mask[i, :length] = False
         
         return padded_inputs, src_key_padding_mask
+    
+    def remove_zeros_shift_left(tensor):
+        # List to store the new rows
+        new_rows = []
+    
+        for row in tensor:
+            # Filter out the zeros
+            non_zeros = row[row != 0]
+            # Calculate the number of zeros to append
+            num_zeros = len(row) - len(non_zeros)
+            # Create the new row with non-zeros followed by zeros
+            new_row = torch.cat((non_zeros, torch.zeros(num_zeros, dtype=row.dtype)))
+            new_rows.append(new_row)
+    
+        # Stack the new rows to form the modified tensor
+        new_tensor = torch.stack(new_rows)
+    
+        return new_tensor
     
