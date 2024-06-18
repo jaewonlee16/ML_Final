@@ -42,7 +42,7 @@ class MLDataset(Dataset):
         """
 
         # Padding images and labels to length 10 at random positions
-        new_seq_length = 0
+        new_seq_length = 10
         if seq_length < 10:
             num_padding = 10 - seq_length
             padding_positions = sorted(random.sample(range(10), num_padding))
