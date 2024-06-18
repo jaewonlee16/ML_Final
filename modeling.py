@@ -482,7 +482,7 @@ class TransformerEncoder(nn.Module):
         
     def forward(self, inputs, lengths, max_seq_len=10):
         batch_size, seq_len, h, w, c = inputs.shape
-        src_key_padding_mask = torch.ones((batch_size, max_seq_len), device=inputs.device, dtype=torch.bool)
+        src_key_padding_mask = torch.ones((batch_size, seq_len), device=inputs.device, dtype=torch.bool)
         for i, length in enumerate(lengths.type(torch.int32)):
             src_key_padding_mask[i, :length] = False
         x = self.cnn(inputs)
