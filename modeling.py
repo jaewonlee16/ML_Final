@@ -420,7 +420,7 @@ class PositionalEncoding(nn.Module):
 
 
 class TransformerDecoder(nn.Module):
-    def __init__(self, n_vocab=28, hidden_dim=64, num_layers=2, pad_idx=0, dropout=0.5, embed_dim=None, nhead=8):
+    def __init__(self, n_vocab=28, hidden_dim=64, num_layers=2, pad_idx=0, dropout=0.5, embed_dim=None, nhead=8, dim_feedforward=2048):
         super(TransformerDecoder, self).__init__()
         self.hidden_dim = hidden_dim
         self.embed_dim = embed_dim or hidden_dim
@@ -430,7 +430,7 @@ class TransformerDecoder(nn.Module):
         self.embedding = nn.Embedding(n_vocab, self.embed_dim, padding_idx=pad_idx)
         self.positional_encoding = PositionalEncoding(self.embed_dim)
         
-        decoder_layer = nn.TransformerDecoderLayer(d_model=self.embed_dim, nhead=nhead, dropout=dropout)
+        decoder_layer = nn.TransformerDecoderLayer(d_model=self.embed_dim, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout)
         self.transformer_decoder = nn.TransformerDecoder(decoder_layer, num_layers=num_layers)
         self.lm_head = nn.Linear(self.embed_dim, n_vocab)
 
@@ -441,7 +441,6 @@ class TransformerDecoder(nn.Module):
         return mask
     
     def create_pad_mask(self, tgt: torch.Tensor, pad_idx: int) -> torch.Tensor:
-        # 패딩 토큰 위치를 -inf, 나머지를 0.0으로 설정한 마스크를 생성
         mask = (tgt == pad_idx).float()
         mask = mask.masked_fill(mask == 1, float('-inf'))
         mask = mask.masked_fill(mask == 0, float(0.0))
@@ -470,7 +469,7 @@ class TransformerDecoder(nn.Module):
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim=64, num_layers=2, dropout=0.5, customCNN="CustomCNN", nhead=2):
+    def __init__(self, input_dim, hidden_dim=64, num_layers=2, dropout=0.5, customCNN="CustomCNN", nhead=2, dim_feedforward=2048):
         super(TransformerEncoder, self).__init__()
         self.hidden_dim = hidden_dim
         func = globals()[customCNN]
@@ -478,7 +477,7 @@ class TransformerEncoder(nn.Module):
         #self.embedding = nn.Embedding(input_dim, hidden_dim, padding_idx=0)
         self.positional_encoding = PositionalEncoding(hidden_dim)
 
-        encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=nhead, dropout=dropout)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_dim, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         
     def forward(self, inputs, lengths, max_seq_len=10):
@@ -499,7 +498,7 @@ class TransformerEncoder(nn.Module):
 
 class TransformerSeq2Seq(nn.Module):
     def __init__(self, num_classes=28, hidden_dim=64, n_rnn_layers=2, embed_dim = 28, rnn_dropout=0.5, 
-                 device = torch.device("cuda:0"), customCNN = "CustomCNN", nhead=8):
+                 device = torch.device("cuda:0"), customCNN = "CustomCNN", nhead=8, dim_feedforward=2048):
         # NOTE: you can freely add hyperparameters argument
         super(TransformerSeq2Seq, self).__init__()
         ##############################################################################
@@ -511,13 +510,15 @@ class TransformerSeq2Seq(nn.Module):
                                input_dim=hidden_dim, 
                                dropout=rnn_dropout,
                                customCNN=customCNN,
-                               nhead=nhead)
+                               nhead=nhead,
+                               dim_feedforward=dim_feedforward)
         self.decoder = TransformerDecoder(n_vocab=num_classes, 
                                hidden_dim=hidden_dim, 
                                num_layers=n_rnn_layers, 
                                embed_dim=hidden_dim, 
                                dropout=rnn_dropout,
-                               nhead=nhead)
+                               nhead=nhead,
+                               dim_feedforward=dim_feedforward)
         self.device = device
         # NOTE: you can define additional parameters
         ##############################################################################
