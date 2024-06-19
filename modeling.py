@@ -379,6 +379,7 @@ class Seq2SeqModel(nn.Module):
         # Problem 4: design generate function of Seq2SeqModel
 
         cnn3_outputs, encoder_hidden = self.encoder(inputs, lengths)
+        seq_len = cnn3_outputs.shape[1]
         
         # Initialize the input for the decoder with the start token
         dec_input = inp_seq
@@ -386,7 +387,7 @@ class Seq2SeqModel(nn.Module):
         
         generated_tok = []
         
-        for t in range(max_length):
+        for t in range(seq_len):
             logits, dec_hidden = self.decoder(dec_input, dec_hidden, cnn3_outputs[:, t, :])
             predicted_token = logits.argmax(2)
             generated_tok.append(predicted_token)
