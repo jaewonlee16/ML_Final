@@ -619,41 +619,15 @@ class TransformerSeq2Seq(nn.Module):
         return final_outputs[:, 1:]
     
 from abc import *
-from collections import UserDict
+
 
 
 
 # This code is from huggingface
-@abstractmethod
-class BeamScorer(ABC):
-    """
-    Abstract base class for all beam scorers that are used for :meth:`~transformers.PretrainedModel.beam_search` and
-    :meth:`~transformers.PretrainedModel.beam_sample`.
-    """
-
-    def process(
-        self,
-        input_ids: torch.LongTensor,
-        next_scores: torch.FloatTensor,
-        next_tokens: torch.LongTensor,
-        next_indices: torch.LongTensor,
-        **kwargs
-    ):
-        raise NotImplementedError("This is an abstract method.")
-
-    def finalize(
-        self,
-        input_ids: torch.LongTensor,
-        next_scores: torch.FloatTensor,
-        next_tokens: torch.LongTensor,
-        next_indices: torch.LongTensor,
-        **kwargs
-    ) -> torch.LongTensor:
-        raise NotImplementedError("This is an abstract method.")
 
 
 
-class BeamSearchScorer(BeamScorer):
+class BeamSearchScorer():
     def __init__(
         self,
         batch_size: int,
@@ -761,7 +735,7 @@ class BeamSearchScorer(BeamScorer):
                 next_scores[batch_idx].max().item(), cur_len
             )
 
-        return UserDict(
+        return dict(
             {
                 "next_beam_scores": next_beam_scores.view(-1),
                 "next_beam_tokens": next_beam_tokens.view(-1),
