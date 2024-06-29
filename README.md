@@ -5,7 +5,7 @@
 
 
 ## Overview
-Report (https://github.com/jaewonlee16/ML_Final/blob/master/ML_Final_report.pdf)
+[Report] (https://github.com/jaewonlee16/ML_Final/blob/master/ML_Final_report.pdf)
 
 This project focuses on correcting typos in words represented as sequences of RGB character images. Given a sequence of character images of length \( T \), the goal is to output the correct word sequence in character form. The input consists of a 3-channel RGB-scale character image sequence, and the output is a 1-dimensional integer sequence corresponding to the alphabet characters.
 
