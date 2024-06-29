@@ -1,7 +1,7 @@
 # Final Project - Typo Correction for RGB Character Image Sequence
 
 ## Final Accuracy: 87.458% (Kaggle test), 87.755% (Validation)
-## Final Ranking: 3rd / 107
+## Final Ranking: 3rd / 107 in SNU ECE Machine Learning Fundamentals & Applications (M2608.001300) lecture, at 2024 spring.
 
 
 ## Overview
