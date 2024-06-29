@@ -1,11 +1,23 @@
 # Final Project - Typo Correction for RGB Character Image Sequence
 
+## Final Accuracy: 87.458% (Kaggle test), 87.755% (Validation)
+## Final Ranking: 3rd / 107
+
 ## Overview
 
 This project focuses on correcting typos in words represented as sequences of RGB character images. Given a sequence of character images of length \( T \), the goal is to output the correct word sequence in character form. The input consists of a 3-channel RGB-scale character image sequence, and the output is a 1-dimensional integer sequence corresponding to the alphabet characters.
 
 - **Input:** RGB-scale character image sequence of shape (𝑇, 28, 28, 3), where 4 ≤ 𝑇 ≤ 10
+  - Training data: 4 ≤ 𝑇 ≤ 8
+  - ![Train image](https://github.com/jaewonlee16/ML_Final/assets/73290953/21237e5d-5379-46b0-8641-a5def894fe8a)
+  - Validation, Test data: 9 ≤ 𝑇 ≤ 10
+  - ![Validation Image](https://github.com/jaewonlee16/ML_Final/assets/73290953/37a3e024-41db-487e-8b8b-a8c8714b362c)
+
 - **Output:** 1-dimensional integer sequence of length 𝑇, where each integer corresponds to an alphabet character (case insensitive)
+  - Training data: 4 ≤ 𝑇 ≤ 8
+  - "hapa"
+  - Validation, Test data: 9 ≤ 𝑇 ≤ 10
+  - "rejuvenate"
 
 ## Architecture
 
