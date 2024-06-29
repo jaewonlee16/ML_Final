@@ -3,7 +3,9 @@
 ## Final Accuracy: 87.458% (Kaggle test), 87.755% (Validation)
 ## Final Ranking: 3rd / 107
 
+
 ## Overview
+Report (https://github.com/jaewonlee16/ML_Final/blob/master/ML_Final_report.pdf)
 
 This project focuses on correcting typos in words represented as sequences of RGB character images. Given a sequence of character images of length \( T \), the goal is to output the correct word sequence in character form. The input consists of a 3-channel RGB-scale character image sequence, and the output is a 1-dimensional integer sequence corresponding to the alphabet characters.
 
@@ -31,13 +33,13 @@ The model utilizes a Seq2Seq architecture, combining a CNN + RNN Encoder and an 
 
 ### Encoder
 
-- **CNN:** Custom CNN class with freely defined parameters and hyper-parameters
-- **RNN:** Can choose any RNN model (LSTM, GRU, etc.)
+- **CNN:** Custom CNN class with freely defined parameters and hyper-parameters: Used **ResNet18**
+- **RNN:** Can choose any RNN model (LSTM, GRU, etc.): Used **Transformer** for challenge
 - **Additional Parameters:** Defined freely and used in the forward function
 
 ### Decoder
 
-- **RNN:** Can choose any RNN model (LSTM, GRU, etc.)
+- **RNN:** Can choose any RNN model (LSTM, GRU, etc.): Used **Transformer** for challenge
 - **Additional Parameters:** Defined freely and used in the forward function
 
 ### Training and Evaluation
