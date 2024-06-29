@@ -1,5 +1,5 @@
 # Typo Correction for RGB Character Image Sequence
-Final Project in SNU ECE Machine Learning Fundamentals & Applications (M2608.001300) lecture, at 2022 spring.
+Final Project in SNU ECE Machine Learning Fundamentals & Applications (M2608.001300) lecture, at 2024 spring.
 
 ### Final Accuracy: 87.458% (Kaggle test), 87.755% (Validation)
 ### Final Ranking: 3rd / 107
