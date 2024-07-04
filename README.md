@@ -1,8 +1,19 @@
 # Typo Correction for RGB Character Image Sequence
 Final Project in SNU ECE Machine Learning Fundamentals & Applications (M2608.001300) lecture, at 2024 spring.
 
-### Final Accuracy: 87.458% (Kaggle test), 87.755% (Validation)
-### Final Ranking: 3rd / 107
+## Datasets
+[data.tar](https://drive.google.com/file/d/1PglNHe-CJ4rq2OakYS4cQjnccBD176ua/view?usp=sharing)
+
+## Normal Task (No Transformers)
+- Validation Accuracy: 80.548%
+- [main.ipynb](https://github.com/jaewonlee16/ML_Final/blob/master/main.ipynb)
+- [model](https://drive.google.com/file/d/1hQ7I6Ch4zWoaX1UTHjBOlaAJF-SPUXS5/view?usp=drive_link)
+
+## Challenge Task
+- Final Accuracy: **87.458%** (Kaggle test), **87.755%** (Validation)
+- Final Ranking: **3rd** / 107
+- [main_challenge.ipynb](https://github.com/jaewonlee16/ML_Final/blob/master/main_challenge.ipynb)
+- [model](https://drive.google.com/file/d/1psh6P1I9dMvZ_No7mIKhpDHtf1u7vRqM/view?usp=drive_link)
 
 
 ## Overview
